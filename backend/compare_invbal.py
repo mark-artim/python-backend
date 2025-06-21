@@ -7,6 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def register_routes(app):
+    logger.info("✅ Routes registered from compare_invbal.py")
     @app.route('/api/compare-inv-bal', methods=['POST'])
     def compare_inventory():
         try:
