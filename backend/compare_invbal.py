@@ -18,8 +18,8 @@ def register_routes(app):
             logger.info(f"compare-inv-bal called with eds_part_col={eds_part_col}")
             logger.info(f"Received files: conv_file={conv_file.filename}, eds_file={eds_file.filename}")
 
-            conv_df = pd.read_csv(conv_file.stream, skiprows=8)
-            eds_df = pd.read_csv(eds_file.stream, skiprows=8)
+            conv_df = pd.read_csv(conv_file.stream, encoding='windows-1252', skiprows=8, dtype=str)
+            eds_df = pd.read_csv(eds_file.stream, encoding='windows-1252', skiprows=8, dtype=str)
 
             conv_df['ECL_PN'] = conv_df['ECL_PN'].astype(str).str.strip()
             eds_df['ECL_PN'] = eds_df[eds_part_col].astype(str).str.strip()
