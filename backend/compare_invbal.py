@@ -7,61 +7,52 @@ import logging
 logger = logging.getLogger(__name__)
 
 def register_routes(app):
-    logger.info("✅ Routes registered from compare_invbal.py")
     @app.route('/api/compare-inv-bal', methods=['POST'])
-    def compare_inventory():
-    try:
-        eds_part_col = request.form.get('eds_part_col')
-        conv_file = request.files['conv_file']
-        eds_file = request.files['eds_file']
-        
-        logger.info(f"compare-inv-bal called with eds_part_col={eds_part_col}")
-        logger.info(f"Received files: conv_file={conv_file.filename}, eds_file={eds_file.filename}")
+    def compare_inv_bal():
+        conv_f = request.files.get('conv_file')
+        eds_f  = request.files.get('eds_file')
+        part_col = request.form.get('eds_part_col')
 
-        # Read both CSVs, skipping header rows and setting encoding
-        conv_df = pd.read_csv(conv_file.stream, encoding='windows-1252', skiprows=8, dtype=str)
-        eds_df = pd.read_csv(eds_file.stream, encoding='windows-1252', skiprows=8, dtype=str)
+        if not conv_f or not eds_f or not part_col:
+            return jsonify(message="Missing one of: conv_file, eds_file or eds_part_col"), 400
 
-        # Clean part numbers
-        conv_df['ECL_PN'] = conv_df['ECL_PN'].astype(str).str.strip()
-        eds_df[eds_part_col] = eds_df[eds_part_col].astype(str).str.strip()
+        try:
+            conv_df = pd.read_csv(conv_f, encoding='windows-1252', skiprows=8, dtype=str)
+            eds_df  = pd.read_csv(eds_f, encoding='windows-1252', skiprows=8, dtype=str)
 
-        # Merge on ECL_PN
-        merged = pd.merge(
-            conv_df, eds_df,
-            how='outer',
-            left_on='ECL_PN',
-            right_on=eds_part_col,
-            suffixes=('_conv', '_eds')
-        )
+            diffs = []
+            for _, eds_row in eds_df.iterrows():
+                eds_part = eds_row.get('ECL_PN')
+                if not eds_part:
+                    continue
 
-        # Convert OH-TOTAL columns safely
-        merged['OH-TOTAL_conv'] = pd.to_numeric(merged.get('OH-TOTAL_conv'), errors='coerce')
-        merged['OH-TOTAL_eds'] = pd.to_numeric(merged.get('OH-TOTAL_eds'), errors='coerce')
+                match = conv_df[conv_df[part_col] == eds_part]
+                if match.empty:
+                    continue
 
-        # Fill NaNs with 0
-        merged.fillna({'OH-TOTAL_conv': 0, 'OH-TOTAL_eds': 0}, inplace=True)
+                conv_row = match.iloc[0]
+                conv_ecl     = conv_row.get('ECL_PN')
+                matched_val  = conv_row.get(part_col)
+                conv_val_str = conv_row.get('OH-TOTAL')
+                eds_val_str  = eds_row.get('OH-TOTAL')
 
-        # Calculate difference
-        merged['Difference'] = merged['OH-TOTAL_conv'] - merged['OH-TOTAL_eds']
+                try:
+                    c = float(conv_val_str)
+                    e = float(eds_val_str)
+                except (ValueError, TypeError):
+                    continue
 
-        # Keep rows where difference is not 0
-        differences = merged[merged['Difference'] != 0]
+                if c != e:
+                    diffs.append({
+                        'eds_ecl':     eds_part,
+                        'conv_ecl':    conv_ecl,
+                        'matched_val': matched_val,
+                        'conv_total':  c,
+                        'eds_total':   e,
+                        'diff':        c - e
+                    })
 
-        # Select only useful fields
-        result = differences[[
-            'ECL_PN', eds_part_col, 'OH-TOTAL_conv', 'OH-TOTAL_eds', 'Difference'
-        ]].rename(columns={
-            'ECL_PN': 'conv_ecl',
-            eds_part_col: 'matched_val',
-            'OH-TOTAL_conv': 'conv_total',
-            'OH-TOTAL_eds': 'eds_total',
-            'Difference': 'diff'
-        })
+            return jsonify(differences=diffs)
 
-        return jsonify(differences=result.to_dict(orient='records'))
-
-    except Exception as e:
-        logger.exception("Error in compare_inventory")
-        return jsonify({'message': str(e)}), 500
-
+        except Exception as ex:
+            return jsonify(message=str(ex)), 500
