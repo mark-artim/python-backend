@@ -49,9 +49,10 @@ def run():
                         f.write(att.payload)
                     print(f"✅ Saved: {att.filename} → {filepath}")
                     upload_to_wasabi(filepath, att.filename)
-        # 🟢 Move the message to the "Processed" folder
-        mailbox.move(msg.uid, 'PROCESSED')
-        print(f"📦 Moved message UID {msg.uid} to 'PROCESSED' folder")
+            # ✅ Move processed email inside loop
+            mailbox.move(msg.uid, 'PROCESSED')
+            print(f"📦 Moved message UID {msg.uid} to 'PROCESSED'")
+
 
 if __name__ == "__main__":
     run()
