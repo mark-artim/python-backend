@@ -7,7 +7,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # Allow all origins for now; you can restrict this later
+# CORS(app)  # Allow all origins for now; you can restrict this later
+
+# 🚨 Explicit CORS setup
+CORS(app,
+     supports_credentials=True,
+     origins=[
+         "https://vue-basic-flame.vercel.app",
+         "https://vue-basic-mark-artims-projects.vercel.app",
+         "http://localhost:3000"
+     ])
 
 # Register route(s) from other modules
 register_routes(app)
