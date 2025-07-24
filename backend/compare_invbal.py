@@ -1,7 +1,5 @@
 from flask import request, jsonify
 import pandas as pd
-from io import StringIO
-import traceback
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,68 +7,66 @@ logger = logging.getLogger(__name__)
 def register_routes(app):
     @app.route('/api/compare-inv-bal', methods=['POST'])
     def compare_inv_bal():
-        # ✅ Log incoming request metadata
-        logger.info("[compare_inv_bal] POST hit")
-        logger.info(f"Headers: {dict(request.headers)}")
-        logger.info(f"Form keys: {request.form.keys()}")
-        logger.info(f"Files: {request.files.keys()}")
-
         conv_f = request.files.get('conv_file')
         eds_f  = request.files.get('eds_file')
         part_col = request.form.get('eds_part_col')
+        value_col = request.form.get('value_col')
 
-        # ✅ Log presence of expected inputs
-        logger.info(f"[compare_inv_bal] conv_file: {bool(conv_f)}, eds_file: {bool(eds_f)}, part_col: {part_col}")
-
-        if not conv_f or not eds_f or not part_col:
-            logger.warning("[compare_inv_bal] Missing input")
-            return jsonify(message="Missing one of: conv_file, eds_file or eds_part_col"), 400
+        if not conv_f or not eds_f or not part_col or not value_col:
+            return jsonify(message="Missing one of: conv_file, eds_file, eds_part_col, value_col"), 400
 
         try:
-            # ✅ Optional: validate file type
-            if not conv_f.filename.endswith('.csv') or not eds_f.filename.endswith('.csv'):
-                logger.warning("[compare_inv_bal] One or more files are not CSVs")
-                return jsonify(message="Only .csv files are supported"), 400
-
-            # ✅ Parse CSV files
             conv_df = pd.read_csv(conv_f, encoding='windows-1252', skiprows=8, dtype=str)
             eds_df  = pd.read_csv(eds_f, encoding='windows-1252', skiprows=8, dtype=str)
 
-            diffs = []
-            for _, eds_row in eds_df.iterrows():
-                eds_part = eds_row.get('ECL_PN')
-                if not eds_part:
-                    continue
+            if part_col not in conv_df.columns:
+                return jsonify(message=f"Part column '{part_col}' not found in CONV file."), 400
 
-                match = conv_df[conv_df[part_col] == eds_part]
-                if match.empty:
-                    continue
+            if value_col not in conv_df.columns or value_col not in eds_df.columns:
+                return jsonify(message=f"Comparison column '{value_col}' not found in both files."), 400
 
-                conv_row = match.iloc[0]
-                conv_ecl     = conv_row.get('ECL_PN')
-                matched_val  = conv_row.get(part_col)
-                conv_val_str = conv_row.get('OH-TOTAL')
-                eds_val_str  = eds_row.get('OH-TOTAL')
+            # Extract and rename columns correctly
+            conv_df_renamed = conv_df[[part_col, 'ECL_PN', value_col]].rename(columns={
+                part_col: 'matched_val',          # <- this should become ESE.PN if selected
+                'ECL_PN': 'conv_ecl',
+                value_col: 'conv_val'
+            })
+            eds_df_renamed = eds_df[['ECL_PN', value_col]].rename(columns={
+                'ECL_PN': 'eds_ecl',
+                value_col: 'eds_val'
+            })
+            # 🔍 DEBUG: Check column names after renaming
+            # print("Merging EDS ECL_PN with CONV", part_col)
 
+            # eds_sample = sorted(eds_df['ECL_PN'].dropna().astype(str).unique())[:20]
+            # conv_sample = sorted(conv_df[part_col].dropna().astype(str).unique())[:20]
+
+            # print("Sample sorted EDS['ECL_PN'] values:", eds_sample)
+            # print(f"Sample sorted CONV['{part_col}'] values:", conv_sample)
+
+            # Merge on part number from conv and eds
+            merged = pd.merge(eds_df_renamed, conv_df_renamed, left_on='eds_ecl', right_on='matched_val', how='inner')
+
+            def safe_float(val):
                 try:
-                    c = float(conv_val_str)
-                    e = float(eds_val_str)
-                except (ValueError, TypeError):
-                    continue
+                    return float(val)
+                except:
+                    return None
 
-                if c != e:
-                    diffs.append({
-                        'eds_ecl':     eds_part,
-                        'conv_ecl':    conv_ecl,
-                        'matched_val': matched_val,
-                        'conv_total':  c,
-                        'eds_total':   e,
-                        'diff':        c - e
-                    })
+            merged['conv_val_f'] = merged['conv_val'].apply(safe_float)
+            merged['eds_val_f']  = merged['eds_val'].apply(safe_float)
+            merged['diff'] = merged['conv_val_f'] - merged['eds_val_f']
 
-            logger.info(f"[compare_inv_bal] Returning {len(diffs)} differences")
-            return jsonify(differences=diffs)
+            mismatches = merged[(merged['conv_val_f'].notnull()) & (merged['eds_val_f'].notnull()) & (merged['diff'] != 0)]
+
+            differences = mismatches[['eds_ecl', 'conv_ecl', 'matched_val', 'conv_val', 'eds_val', 'diff']].to_dict(orient='records')
+            matched_count = len(merged)
+
+            shared_columns = list(set(conv_df.columns) & set(eds_df.columns))
+
+            return jsonify(differences=differences, matched_row_count=matched_count, shared_columns=shared_columns)
 
         except Exception as ex:
-            logger.error("[compare_inv_bal] Exception occurred", exc_info=True)
-            return jsonify(message="Internal server error", detail=str(ex)), 500
+            logger.exception("[compare_inv_bal] Unexpected error")
+            print(f"[compare_inv_bal] {len(differences)} differences found out of {matched_count} matches")
+            return jsonify(message=str(ex)), 500

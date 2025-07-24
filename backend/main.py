@@ -43,5 +43,5 @@ def health_check():
     return {'status': 'Python backend is running!'}
 
 if __name__ == '__main__':
-    logger.info("🚀 [main.py] Flask server is starting on port 8000...")
-    app.run(host='0.0.0.0', port=8000)
+    logger.info("🚀 [main.py] Flask server is starting on port 5000...")
+    app.run(host='0.0.0.0', port=5000)
