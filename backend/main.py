@@ -1,4 +1,4 @@
-print("⚠️ main.py booting up")
+print("⚠️ I made it to the top line of main.py")
 
 from flask import Flask
 from flask_cors import CORS

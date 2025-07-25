@@ -12,7 +12,7 @@ COPY requirements.txt /app/
 # Install Python dependencies
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-EXPOSE 8000
+EXPOSE 8080
 
-# Run main.py directly inside the /app/backend working directory
-CMD ["python", "main.py"]
+# 🚨 Use -u (unbuffered) and make sure it runs YOUR main.py
+CMD ["python", "-u", "main.py"]
