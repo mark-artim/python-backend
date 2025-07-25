@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 EXPOSE 8000
 
-CMD ["python", "backend/main.py"]
+CMD ["python", "-u", "backend/main.py"]

@@ -4,9 +4,6 @@ from compare_invbal import register_routes
 import logging
 import sys, os
 
-sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=1)
-
-
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logging.info("Logging initialized")
