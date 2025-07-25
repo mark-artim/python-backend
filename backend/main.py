@@ -3,6 +3,7 @@ from flask_cors import CORS
 from compare_invbal import register_routes
 import logging
 import sys, os
+
 sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', buffering=1)
 
 
@@ -47,8 +48,9 @@ def health_check():
     return {'status': 'Python backend is running!'}
 
 if __name__ == '__main__':
-    logger.info("🚀 [main.py] Flask server is starting on port 5000...")
-    app.run(host='0.0.0.0', port=5000)
+    logger.info("🚀 [main.py] Flask server is starting...")
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+
     
-app.run(host='0.0.0.0', port=5000)
 
