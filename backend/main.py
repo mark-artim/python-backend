@@ -1,3 +1,5 @@
+print("⚠️ main.py booting up")
+
 from flask import Flask
 from flask_cors import CORS
 from compare_invbal import register_routes
