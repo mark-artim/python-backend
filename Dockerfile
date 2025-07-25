@@ -15,5 +15,4 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 EXPOSE 8000
 
 # Run main.py directly inside the /app/backend working directory
-# CMD ["python", "main.py"]
-CMD ["sh", "-c", "python main.py --port ${PORT}"]
+CMD ["python", "main.py"]
