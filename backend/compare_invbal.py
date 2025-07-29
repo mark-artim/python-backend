@@ -15,6 +15,9 @@ def register_routes(app):
         if not conv_f or not eds_f or not part_col or not value_col:
             return jsonify(message="Missing one of: conv_file, eds_file, eds_part_col, value_col"), 400
 
+        differences = []  # initialize for error handling
+        matched_count = 0
+
         try:
             conv_df = pd.read_csv(conv_f, encoding='windows-1252', skiprows=8, dtype=str)
             eds_df  = pd.read_csv(eds_f, encoding='windows-1252', skiprows=8, dtype=str)
@@ -68,5 +71,8 @@ def register_routes(app):
 
         except Exception as ex:
             logger.exception("[compare_inv_bal] Unexpected error")
-            print(f"[compare_inv_bal] {len(differences)} differences found out of {matched_count} matches")
+            if matched_count:
+                logger.error(
+                    f"[compare_inv_bal] {len(differences)} differences found out of {matched_count} matches"
+                )
             return jsonify(message=str(ex)), 500
