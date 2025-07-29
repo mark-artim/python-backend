@@ -25,8 +25,8 @@ CORS(app,
 logger.info("✅ [main.py] CORS configured.")
 
 # Max upload size for file processing
-app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
-logger.info("✅ [main.py] MAX_CONTENT_LENGTH set to 20MB.")
+app.config['MAX_CONTENT_LENGTH'] = 40 * 1024 * 1024  # 40 MB
+logger.info("✅ [main.py] MAX_CONTENT_LENGTH set to 40MB.")
 
 # Register API routes
 register_routes(app)
@@ -48,7 +48,7 @@ def health_check():
 
 if __name__ == '__main__':
     logger.info("🚀 [main.py] Flask server is starting...")
-    port = int(os.environ.get("PORT", 8080))
+    port = int(os.environ.get("PORT", 8000))
     print("⚠️ main.py booting up")
     app.run(host='0.0.0.0', port=port)
 

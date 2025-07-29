@@ -12,7 +12,7 @@ COPY requirements.txt /app/
 # Install Python dependencies
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-EXPOSE 8080
+EXPOSE 8000
 
 # 🚨 Use -u (unbuffered) and make sure it runs YOUR main.py
 CMD ["python", "-u", "main.py"]
