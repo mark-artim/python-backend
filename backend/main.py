@@ -40,11 +40,17 @@ def handle_exception(e):
     logger.error("[main.py] ❌ Unhandled Exception", exc_info=True)
     return {"error": "Internal server error", "message": str(e)}, 500
 
-# Root health check
+# Root health check at root path
 @app.route('/')
-def health_check():
+def root_health_check():
     logger.info("✅ [main.py] / health check was called.")
     return {'status': 'Python backend is running!'}
+
+# Dedicated /health endpoint used by deployment platforms
+@app.route('/health')
+def health_check():
+    logger.info("✅ [main.py] /health endpoint was called.")
+    return {'status': 'ok'}
 
 if __name__ == '__main__':
     logger.info("🚀 [main.py] Flask server is starting...")
