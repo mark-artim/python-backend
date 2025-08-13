@@ -28,6 +28,13 @@ def register_routes(app):
         try:
             conv_df = pd.read_csv(conv_f, encoding='windows-1252', skiprows=8, dtype=str)
             eds_df  = pd.read_csv(eds_f, encoding='windows-1252', skiprows=8, dtype=str)
+            
+            # Fill NaN values in display columns to prevent undefined values in output
+            if display_col:
+                if display_col in conv_df.columns:
+                    conv_df[display_col] = conv_df[display_col].fillna('')
+                if display_col in eds_df.columns:
+                    eds_df[display_col] = eds_df[display_col].fillna('')
 
             if part_col not in conv_df.columns:
                 return jsonify(message=f"Part column '{part_col}' not found in CONV file."), 400
@@ -93,10 +100,14 @@ def register_routes(app):
 
             # Prepare output columns based on whether display column is included
             output_cols = ['eds_ecl', 'conv_ecl', 'matched_val', 'conv_val', 'eds_val', 'diff']
+            
+            # Add display columns to output if they exist
             if display_col and 'conv_display' in mismatches.columns and 'eds_display' in mismatches.columns:
                 output_cols.extend(['conv_display', 'eds_display'])
             
-            differences = mismatches[output_cols].to_dict(orient='records')
+            # Replace NaN values before converting to dict
+            mismatches_clean = mismatches[output_cols].fillna(value=None)
+            differences = mismatches_clean.to_dict(orient='records')
             matched_count = len(merged)
 
             shared_columns = list(set(conv_df.columns) & set(eds_df.columns))
