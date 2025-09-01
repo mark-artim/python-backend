@@ -3,6 +3,7 @@ print("WARNING: I made it to the top line of main.py")
 from flask import Flask
 from flask_cors import CORS
 from compare_invbal import register_routes
+from csv_processor import register_csv_routes
 import logging
 import sys, os
 
@@ -30,7 +31,15 @@ logger.info("[main.py] MAX_CONTENT_LENGTH set to 40MB.")
 
 # Register API routes
 register_routes(app)
-logger.info("[main.py] Routes registered (compare_invbal, etc.).")
+register_csv_routes(app)
+logger.info("[main.py] Routes registered (compare_invbal, csv_processor, etc.).")
+
+# Request logging middleware
+@app.before_request
+def log_request():
+    logger.info(f"[REQUEST] {request.method} {request.path} from {request.remote_addr}")
+    if request.form:
+        logger.info(f"[FORM DATA] {dict(request.form)}")
 
 # Global error handler to log tracebacks
 @app.errorhandler(Exception)
